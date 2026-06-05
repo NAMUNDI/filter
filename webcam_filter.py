@@ -227,29 +227,27 @@ def apply_filter(frame: np.ndarray, filter_key: str, param: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def open_camera(device_index: int, width: int, height: int,
-                retry: int = 3) -> Optional[cv2.VideoCapture]:
-    """웹캠을 열고 해상도를 설정한다. 실패 시 retry 횟수만큼 재시도."""
-    for attempt in range(1, retry + 1):
-        print(f"[INFO] Camera connect attempt {attempt}/{retry}  (device={device_index})")
+                retry: int = 1) -> Optional[cv2.VideoCapture]:
+    """웹캠을 즉시 열고 해상도를 설정한다. UI 프리징 방지를 위해 절대 time.sleep 대기를 하지 않는다."""
+    print(f"[INFO] Connecting to camera (device={device_index})...")
 
-        # Windows: CAP_DSHOW 먼저 시도
+    # 1. 기본 백엔드로 먼저 신속 시도 (Windows/Linux/macOS 공용)
+    cap = cv2.VideoCapture(device_index)
+    
+    # 2. 실패 시 Windows 특화 CAP_DSHOW 백엔드로 시도
+    if cap is None or not cap.isOpened():
         cap = cv2.VideoCapture(device_index, cv2.CAP_DSHOW)
-        if cap is None or not cap.isOpened():
-            cap = cv2.VideoCapture(device_index)
 
-        if cap.isOpened():
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH,  width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-            cap.set(cv2.CAP_PROP_FPS, 30)
-            aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            print(f"[INFO] Camera connected  {aw}x{ah}")
-            return cap
+    if cap is not None and cap.isOpened():
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH,  width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        cap.set(cv2.CAP_PROP_FPS, 30)
+        aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        print(f"[INFO] Camera connected successfully ({aw}x{ah})")
+        return cap
 
-        print(f"[WARN] Cannot open camera. Retrying in 1s...")
-        time.sleep(1.0)
-
-    print("[ERROR] All connection attempts failed.")
+    print(f"[WARN] Failed to open camera device index: {device_index}")
     return None
 
 
@@ -501,16 +499,16 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                     )
                     cv2.imshow(window_name, err_disp)
                     cv2.waitKey(1)
-                    time.sleep(2.0)
+                    time.sleep(0.1)
 
-                    cap = open_camera(device_index, width, height, retry=3)
+                    cap = open_camera(device_index, width, height, retry=1)
                     if cap is not None:
                         read_fail_count = 0
                         print("[INFO] Auto-reconnect successful.")
                     else:
                         print("[ERROR] Auto-reconnect failed. Camera set to OFF.")
                         cam_active = False
-                time.sleep(0.033)
+                time.sleep(0.01)
                 continue
 
             # 정상 프레임
