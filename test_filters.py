@@ -1,5 +1,5 @@
 """
-test_filters.py  —  filters.py 각 함수 자동 테스트
+test_filters.py  -  filters.py 각 함수 자동 테스트
 """
 import sys
 import traceback

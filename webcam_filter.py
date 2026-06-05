@@ -337,7 +337,7 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                             cap = None
                         print("[INFO] Camera OFF (via Mouse click)")
                     else:
-                        print(f"[INFO] Camera ON — reconnecting to device {device_index} (via Mouse click)...")
+                        print(f"[INFO] Camera ON - reconnecting to device {device_index} (via Mouse click)...")
                         cap = open_camera(device_index, width, height, retry=3)
                         if cap is None:
                             print(f"[WARN] Reconnect to device {device_index} failed. Staying in OFF state.")
@@ -388,7 +388,7 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                     print("[INFO] Camera OFF (paused on last frame)")
                 else:
                     # ON: 카메라 재연결 시도
-                    print("[INFO] Camera ON — reconnecting...")
+                    print("[INFO] Camera ON - reconnecting...")
                     cap = open_camera(device_index, width, height, retry=3)
                     if cap is None:
                         print("[WARN] Reconnect failed. Staying in OFF state.")
@@ -475,7 +475,7 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                     # 에러 화면 잠시 표시
                     err_disp = make_status_frame(
                         width, height,
-                        title="Connection Lost — Reconnecting...",
+                        title="Connection Lost - Reconnecting...",
                         subtitle="[R] Manual reconnect  [Q] Quit"
                     )
                     cv2.imshow(window_name, err_disp)
