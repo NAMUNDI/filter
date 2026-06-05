@@ -60,6 +60,7 @@ KEY_6     = ord("6")
 KEY_Q     = ord("q")
 KEY_R     = ord("r")       # 재연결
 KEY_SPACE = ord(" ")       # 카메라 ON/OFF 토글
+KEY_C     = ord("c")       # 카메라 장치 순환 전환 (Cycle)
 KEY_ESC   = 27
 KEY_UP    = 82             # ↑ 방향키 (Windows)
 KEY_DN    = 84             # ↓ 방향키 (Windows)
@@ -109,11 +110,12 @@ COLOR_BG      = (20,  20,   30)
 
 def draw_hud(frame: np.ndarray, filter_name: str,
              param_val: Optional[int], param_label: Optional[str],
-             fps: float, cam_active: bool, paused: bool) -> np.ndarray:
+             fps: float, cam_active: bool, paused: bool, device_index: int = 0) -> np.ndarray:
     """
     프레임 위에 반투명 HUD 패널을 그린다.
     cam_active : 카메라 ON 여부
     paused     : 마지막 프레임을 고정 표시 중 여부
+    device_index: 현재 선택된 카메라 장치 인덱스
     """
     overlay = frame.copy()
     h, w    = frame.shape[:2]
@@ -126,18 +128,18 @@ def draw_hud(frame: np.ndarray, filter_name: str,
     # 카메라 상태 배지 (● LIVE / ■ PAUSED)
     if cam_active and not paused:
         badge_color = (40, 200, 40)
-        badge_text  = "● LIVE"
+        badge_text  = f"● LIVE (CAM {device_index})"
     else:
         badge_color = COLOR_ORANGE
-        badge_text  = "■ PAUSED"
+        badge_text  = f"■ PAUSED (CAM {device_index})"
     cv2.putText(frame, badge_text,
                 (12, 26), cv2.FONT_HERSHEY_SIMPLEX,
-                0.65, badge_color, 2, cv2.LINE_AA)
+                0.62, badge_color, 2, cv2.LINE_AA)
 
     # 필터 이름
     cv2.putText(frame, f"Filter: {filter_name}",
-                (110, 26), cv2.FONT_HERSHEY_SIMPLEX,
-                0.65, COLOR_YELLOW, 2, cv2.LINE_AA)
+                (175, 26), cv2.FONT_HERSHEY_SIMPLEX,
+                0.62, COLOR_YELLOW, 2, cv2.LINE_AA)
 
     # 파라미터
     if param_val is not None and param_label:
@@ -175,8 +177,8 @@ def draw_hud(frame: np.ndarray, filter_name: str,
                 0.58, COLOR_WHITE, 1, cv2.LINE_AA)
 
     # ── 하단 조작 안내 ─────────────────────────────────────────────────────
-    hint = "[SPACE]/[Mouse Click] Cam ON/OFF  [R] Reconnect  [1-6] Filter  [UP/DN] Param  [Q] Quit"
-    (tw2, _), _ = cv2.getTextSize(hint, cv2.FONT_HERSHEY_SIMPLEX, 0.40, 1)
+    hint = "[SPACE]/[Click] Cam ON/OFF  [C] Switch Cam (0-4)  [R] Reconnect  [1-6] Filter  [UP/DN] Param  [Q] Quit"
+    (tw2, _), _ = cv2.getTextSize(hint, cv2.FONT_HERSHEY_SIMPLEX, 0.38, 1)
     cv2.rectangle(overlay, (0, h - 24), (w, h), COLOR_BG, -1)
     frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
     cv2.putText(frame, hint,
@@ -397,6 +399,24 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                         read_fail_count = 0
                 continue  # 이번 이터레이션은 화면 갱신만
 
+            # ── [C] 카메라 장치 순환 전환 (Device Index Cycle) ──────────────────
+            if key == KEY_C:
+                device_index = (device_index + 1) % 5
+                print(f"[INFO] Cycling camera device to index: {device_index}")
+                if cap is not None:
+                    cap.release()
+                    cap = None
+                print(f"[INFO] Reconnecting to camera device {device_index}...")
+                cap = open_camera(device_index, width, height, retry=2)
+                if cap is not None:
+                    cam_active = True
+                    read_fail_count = 0
+                    print(f"[INFO] Connected to camera device {device_index} successfully.")
+                else:
+                    cam_active = False
+                    print(f"[WARN] Failed to connect to camera device {device_index}.")
+                continue
+
             # ── [R] 강제 재연결 ────────────────────────────────────────────────
             if key == KEY_R:
                 print("[INFO] [R] Force reconnect...")
@@ -450,7 +470,8 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                                 if current_filter_key in PARAM_CONFIG else None
                     display = draw_hud(frozen, current_filter_name,
                                        param_val, p_label, fps,
-                                       cam_active=False, paused=True)
+                                       cam_active=False, paused=True,
+                                       device_index=device_index)
                 else:
                     # 아직 프레임이 없음 → 에러 화면
                     display = make_status_frame(
@@ -513,7 +534,8 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                         if current_filter_key in PARAM_CONFIG else None
             display = draw_hud(filtered, current_filter_name,
                                param_val, p_label, fps,
-                               cam_active=True, paused=False)
+                               cam_active=True, paused=False,
+                               device_index=device_index)
 
             cv2.imshow(window_name, display)
 
