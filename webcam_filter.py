@@ -324,7 +324,7 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
 
         # ── 마우스 이벤트 콜백 정의 및 등록 ─────────────────────────────────
         def on_mouse(event, x, y, flags, param):
-            nonlocal cam_active, cap, read_fail_count
+            nonlocal cam_active, cap, read_fail_count, device_index
             if event == cv2.EVENT_LBUTTONDOWN:
                 # 버튼 영역: x: width - 230 ~ width - 120, y: 12 ~ 42
                 btn_x1, btn_y1 = width - 230, 12
@@ -337,10 +337,10 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                             cap = None
                         print("[INFO] Camera OFF (via Mouse click)")
                     else:
-                        print("[INFO] Camera ON — reconnecting (via Mouse click)...")
+                        print(f"[INFO] Camera ON — reconnecting to device {device_index} (via Mouse click)...")
                         cap = open_camera(device_index, width, height, retry=3)
                         if cap is None:
-                            print("[WARN] Reconnect failed. Staying in OFF state.")
+                            print(f"[WARN] Reconnect to device {device_index} failed. Staying in OFF state.")
                             cam_active = False
                         else:
                             read_fail_count = 0
@@ -420,15 +420,25 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                     current_param = PARAM_CONFIG[current_filter_key]["default"]
                 print(f"[INFO] Filter: {current_filter_name}")
 
-            # ── 파라미터 조절 키 ───────────────────────────────────────────────
-            if current_filter_key in PARAM_CONFIG:
-                cfg = PARAM_CONFIG[current_filter_key]
+            # ── 파라미터 또는 카메라 장치 인덱스 조절 키 ───────────────────────
+            if cap is None or not cam_active:
+                # 카메라가 오프라인일 때는 방향키로 연결할 장치 인덱스(Device Index) 변경
                 if key == KEY_UP:
-                    current_param = min(current_param + cfg["step"], cfg["max"])
+                    device_index = min(device_index + 1, 5)
+                    print(f"[INFO] Changed target camera device index to: {device_index} (Press [R] to reconnect to this device)")
                 elif key == KEY_DN:
-                    current_param = max(current_param - cfg["step"], cfg["min"])
-                if current_filter_key == "sketch" and current_param % 2 == 0:
-                    current_param += 1
+                    device_index = max(device_index - 1, 0)
+                    print(f"[INFO] Changed target camera device index to: {device_index} (Press [R] to reconnect to this device)")
+            else:
+                # 정상 스트리밍 중에는 필터 파라미터 조절
+                if current_filter_key in PARAM_CONFIG:
+                    cfg = PARAM_CONFIG[current_filter_key]
+                    if key == KEY_UP:
+                        current_param = min(current_param + cfg["step"], cfg["max"])
+                    elif key == KEY_DN:
+                        current_param = max(current_param - cfg["step"], cfg["min"])
+                    if current_filter_key == "sketch" and current_param % 2 == 0:
+                        current_param += 1
 
             # ── 카메라 OFF 상태: 마지막 프레임 고정 표시 ──────────────────────
             if not cam_active or cap is None:
@@ -445,8 +455,8 @@ def run(device_index: int = 0, width: int = 640, height: int = 480) -> None:  # 
                     # 아직 프레임이 없음 → 에러 화면
                     display = make_status_frame(
                         width, height,
-                        title="Camera Offline",
-                        subtitle="[SPACE] Toggle  [R] Reconnect  [Q] Quit",
+                        title=f"Camera Offline (Target Device: {device_index})",
+                        subtitle="[UP/DN] Change Device Index  [R] Reconnect  [Q] Quit",
                         icon="||", icon_color=COLOR_ORANGE
                     )
                 cv2.imshow(window_name, display)

@@ -349,6 +349,20 @@ with st.sidebar:
         st.markdown("### ℹ️ 파라미터")
         st.info("카툰 필터는 별도 파라미터 없이\nbilateralFilter × 4회 반복으로 동작합니다.")
 
+    # ── 웹캠 모드 장치 설정 추가 ─────────────────────────────────────────────
+    cam_index = 0
+    if app_mode == "🎥 실시간 웹캠 스트리밍":
+        st.markdown("---")
+        st.markdown("### 🎥 웹캠 장치 설정")
+        cam_index = st.number_input(
+            label="카메라 장치 번호 (Device Index)",
+            min_value=0,
+            max_value=5,
+            value=0,
+            step=1,
+            help="노트북 기본 웹캠은 0입니다. 모니터 외장 카메라 등을 사용하실 경우 1, 2 등으로 올려서 시도해 보세요."
+        )
+
     st.markdown("---")
     st.caption("📌 filters.py 모듈 연동 · OpenCV + NumPy")
 
@@ -486,13 +500,13 @@ else:
             st.info("○ 카메라 꺼짐 (OFF)")
 
         st.markdown(
-            """
+            f"""
             <div style="background: #1a1d2e; border: 1px solid #2d2f45; border-radius: 10px; padding: 0.8rem; font-size: 0.82rem; color: #9ca3af;">
                 💡 <b>작동 안내</b><br>
-                - 카메라가 켜지면 윈도우 환경에서 로컬 장치 0번(Default Webcam)을 로드합니다.<br>
+                - 카메라가 켜지면 선택된 카메라 장치 번호(현재: {cam_index}번)를 로드합니다.<br>
                 - 다른 애플리케이션(Zoom, Discord 등)이 카메라를 점유 중일 경우 연결되지 않을 수 있습니다.<br>
-                - 모드를 변경하거나 [카메라 끄기]를 클릭하면 리소스가 안전하게 릴리즈됩니다.<br>
-                - CCTV 필터의 타임스탬프와 REC 표시가 매 프레임 실시간 업데이트됩니다.
+                - 화면이 나오지 않거나 에러 발생 시, 사이드바에서 장치 번호를 1, 2 등으로 변경해 보세요.<br>
+                - 모드를 변경하거나 [카메라 끄기]를 클릭하면 리소스가 안전하게 릴리즈됩니다.
             </div>
             """,
             unsafe_allow_html=True
@@ -507,12 +521,12 @@ else:
 
         if st.session_state.webcam_running:
             # 윈도우 환경 대응: CAP_DSHOW 먼저 시도
-            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            cap = cv2.VideoCapture(cam_index, cv2.CAP_DSHOW)
             if not cap.isOpened():
-                cap = cv2.VideoCapture(0)
+                cap = cv2.VideoCapture(cam_index)
 
             if not cap.isOpened():
-                st.error("⚠️ 웹캠 카메라 장치를 열 수 없습니다.")
+                st.error(f"⚠️ 웹캠 카메라 장치 {cam_index}번을 열 수 없습니다. 다른 장치 번호(1, 2 등)로 변경하여 시도해 보세요.")
                 st.session_state.webcam_running = False
                 st.rerun()
             else:
@@ -537,8 +551,8 @@ else:
                         # 프레임 출력
                         frame_placeholder.image(rgb_frame, channels="RGB", use_container_width=True)
 
-                        # CPU 100% 점유 방지용 최소 대기
-                        time.sleep(0.01)
+                        # CPU 과점유 방지 및 약 30FPS 타겟팅을 위한 대기
+                        time.sleep(0.03)
                 except Exception as e:
                     st.error(f"스트리밍 중 에러가 발생했습니다: {e}")
                 finally:
