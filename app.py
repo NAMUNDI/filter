@@ -520,10 +520,12 @@ else:
         frame_placeholder = st.empty()
 
         if st.session_state.webcam_running:
-            # 윈도우 환경 대응: CAP_DSHOW 먼저 시도
-            cap = cv2.VideoCapture(cam_index, cv2.CAP_DSHOW)
+            # 윈도우 환경 대응: CAP_MSMF 우선 시도 (가장 빠른 응답)
+            cap = cv2.VideoCapture(cam_index, cv2.CAP_MSMF)
             if not cap.isOpened():
                 cap = cv2.VideoCapture(cam_index)
+            if not cap.isOpened():
+                cap = cv2.VideoCapture(cam_index, cv2.CAP_DSHOW)
 
             if not cap.isOpened():
                 st.error(f"⚠️ 웹캠 카메라 장치 {cam_index}번을 열 수 없습니다. 다른 장치 번호(1, 2 등)로 변경하여 시도해 보세요.")

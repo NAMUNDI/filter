@@ -228,13 +228,17 @@ def apply_filter(frame: np.ndarray, filter_key: str, param: int) -> np.ndarray:
 
 def open_camera(device_index: int, width: int, height: int,
                 retry: int = 1) -> Optional[cv2.VideoCapture]:
-    """웹캠을 즉시 열고 해상도를 설정한다. UI 프리징 방지를 위해 절대 time.sleep 대기를 하지 않는다."""
+    """웹캠을 즉시 열고 해상도를 설정한다. UI 프리징 방지를 위해 MSMF를 우선 시도하며 time.sleep 대기를 제거했다."""
     print(f"[INFO] Connecting to camera (device={device_index})...")
 
-    # 1. 기본 백엔드로 먼저 신속 시도 (Windows/Linux/macOS 공용)
-    cap = cv2.VideoCapture(device_index)
+    # 1. Windows 미디어 파운데이션 (MSMF) 백엔드로 우선 시도 (렉 없이 가장 빠름)
+    cap = cv2.VideoCapture(device_index, cv2.CAP_MSMF)
     
-    # 2. 실패 시 Windows 특화 CAP_DSHOW 백엔드로 시도
+    # 2. 실패 시 기본 백엔드로 시도
+    if cap is None or not cap.isOpened():
+        cap = cv2.VideoCapture(device_index)
+    
+    # 3. 실패 시 DSHOW 백엔드로 최후 시도
     if cap is None or not cap.isOpened():
         cap = cv2.VideoCapture(device_index, cv2.CAP_DSHOW)
 
