@@ -391,6 +391,6 @@ if __name__ == "__main__":
         out = fn()
         output_path = f"output_{name}.png"
         cv2.imwrite(output_path, out)
-        print(f"[✓] {name:20s} → {output_path}")
+        print(f"[OK] {name:20s} -> {output_path}")
 
     print("\n모든 필터 적용 완료.")
